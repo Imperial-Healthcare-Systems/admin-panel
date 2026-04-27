@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState, FormEvent, Suspense } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
@@ -9,6 +9,14 @@ import { ShieldCheck, Mail, KeyRound, QrCode, Loader2 } from 'lucide-react'
 type Step = 'email' | 'otp' | 'totp-enroll' | 'totp-verify'
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-[var(--color-text-dim)] text-sm">Loading…</div>}>
+      <LoginInner />
+    </Suspense>
+  )
+}
+
+function LoginInner() {
   const router = useRouter()
   const params = useSearchParams()
   const callbackUrl = params.get('callbackUrl') ?? '/dashboard'
