@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import {
   ArrowLeft, AlertTriangle, Coins, Sparkles, Users, ScrollText, ShieldAlert,
   Receipt, Loader2, ToggleLeft, ToggleRight, ExternalLink,
+  type LucideIcon,
 } from 'lucide-react'
 import { formatINR, formatNumber, formatDate, formatDateTime, relativeTime } from '@/lib/format'
 
@@ -14,7 +15,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 type Tab = 'overview' | 'subscription' | 'credits' | 'features' | 'users' | 'activity' | 'impersonate'
 
-const TABS: { id: Tab; label: string; icon: React.ComponentType<{ size?: number }> }[] = [
+const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: 'overview', label: 'Overview', icon: AlertTriangle },
   { id: 'subscription', label: 'Subscription', icon: Receipt },
   { id: 'credits', label: 'Credits', icon: Coins },

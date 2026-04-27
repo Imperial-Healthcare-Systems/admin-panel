@@ -14,9 +14,10 @@ import {
   ScrollText,
   Settings,
   ShieldCheck,
+  type LucideIcon,
 } from 'lucide-react'
 
-type NavItem = { href: string; label: string; icon: React.ComponentType<{ size?: number }> }
+type NavItem = { href: string; label: string; icon: LucideIcon }
 type NavSection = { title: string; items: NavItem[] }
 
 const sections: NavSection[] = [
