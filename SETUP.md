@@ -131,6 +131,7 @@ API spec routes:
 | `GET /api/admin/revenue` | §6.4 |
 | `POST /api/admin/refunds/create` | §6.5 |
 | `GET/POST /api/cron/health/snapshot` | §6.6 |
+| `GET /api/admin/cron-diagnostics` | Read-only summary for scheduled verification agents (bearer-auth via `CRON_SECRET`) |
 
 ## 8. Security guarantees (§8)
 
