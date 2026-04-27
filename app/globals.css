@@ -1,0 +1,183 @@
+@import 'tailwindcss';
+
+/* =====================================================================
+   Imperial Design Language — Admin Console
+   Reuses tokens from IHRMS v2.2 §7 / ICRM v1.2 §8.
+   Default theme: dark (operations feel — Section 7).
+   ===================================================================== */
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Outfit', 'Inter', sans-serif;
+
+  /* Imperial palette */
+  --color-imperial-blue: #1565C0;
+  --color-imperial-blue-light: #1E88E5;
+  --color-imperial-blue-dark: #0D47A1;
+  --color-saffron: #F47920;
+  --color-saffron-light: #FF9842;
+  --color-forest: #1A7A4A;
+  --color-navy: #0A1628;
+  --color-navy-deep: #050B14;
+
+  /* Operations palette (dark by default) */
+  --color-bg: #0A1628;
+  --color-surface: #0F1E33;
+  --color-surface-2: #14263F;
+  --color-surface-3: #1B324F;
+  --color-border: #1F3A5C;
+  --color-border-strong: #2C4F75;
+  --color-text: #E8EEF7;
+  --color-text-muted: #94A8C2;
+  --color-text-dim: #6B82A0;
+
+  /* Semantic — destructive uses red accent per §7 */
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-danger-bg: #2A0E12;
+  --color-info: #3B82F6;
+
+  /* Health risk levels (§5.7) */
+  --color-health-healthy: #22C55E;
+  --color-health-at-risk: #F59E0B;
+  --color-health-critical: #EF4444;
+
+  /* Layout tokens */
+  --sidebar-width: 250px;
+  --topbar-height: 60px;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+html, body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* Utility classes */
+.imp-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.imp-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.imp-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+}
+.imp-table tbody td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.875rem;
+}
+.imp-table tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.015);
+}
+.imp-table tbody tr:hover {
+  background: var(--color-surface-2);
+}
+
+.imp-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.imp-input {
+  width: 100%;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: 8px;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.imp-input:focus {
+  border-color: var(--color-imperial-blue-light);
+  box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.18);
+}
+
+.imp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.05s;
+  user-select: none;
+}
+.imp-btn:active { transform: translateY(1px); }
+.imp-btn-primary {
+  background: var(--color-imperial-blue);
+  color: white;
+  border: 1px solid var(--color-imperial-blue);
+}
+.imp-btn-primary:hover { background: var(--color-imperial-blue-light); }
+.imp-btn-ghost {
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border-strong);
+}
+.imp-btn-ghost:hover { background: var(--color-surface-2); }
+.imp-btn-danger {
+  background: var(--color-danger);
+  color: white;
+  border: 1px solid var(--color-danger);
+}
+.imp-btn-danger:hover { filter: brightness(1.08); }
+
+/* Impersonation banner — full-width red bar (§7) */
+.imp-impersonation-banner {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  width: 100%;
+  background: var(--color-danger);
+  color: white;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+/* Scrollbar polish */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--color-bg); }
+::-webkit-scrollbar-thumb { background: var(--color-border-strong); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-dim); }

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/health/snapshot",
+      "schedule": "30 21 * * *"
+    }
+  ],
+  "functions": {
+    "app/api/admin/**": {
+      "maxDuration": 30
+    },
+    "app/api/cron/**": {
+      "maxDuration": 60
+    }
+  }
+}
