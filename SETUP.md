@@ -146,7 +146,7 @@ API spec routes:
 ## 9. Decisions captured at build time
 
 - **Gate #1 — Domain**: `imperialhealthcare.cloud` (apex). Drives `NEXTAUTH_URL`, no IP allowlist.
-- **Gate #2 — 2FA**: TOTP mandatory. Implemented via `otplib` + QR enrollment; columns `totp_secret`, `totp_enabled`, `totp_enrolled_at` on `employees`.
+- **Gate #2 — 2FA**: TOTP mandatory. Implemented inline (RFC 4648 base32 + RFC 6238 HMAC-SHA1) in `lib/totp.ts` using Node's built-in `crypto`, plus QR enrollment via `qrcode`. Columns `totp_secret`, `totp_enabled`, `totp_enrolled_at` on `employees`.
 
 ## 10. Known follow-ups
 
