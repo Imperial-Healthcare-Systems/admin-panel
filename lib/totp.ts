@@ -11,7 +11,7 @@ import QRCode from 'qrcode'
 const ISSUER = 'Imperial Admin'
 const STEP = 30
 const DIGITS = 6
-const VERIFY_WINDOW = 1 // accept the previous and next 30s window
+const VERIFY_WINDOW = 4 // accept ±2 minutes of clock skew between server and authenticator
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
 
 function base32Encode(buf: Buffer): string {
@@ -71,15 +71,19 @@ export function generateTotpSecret(): string {
 }
 
 export function buildOtpauthUri(email: string, secret: string): string {
+  // Build query manually so issuer uses %20 for space (matching the label).
+  // URLSearchParams produces `+` for space, which some Authenticator apps
+  // accept but display as a literal "+" — confusing, and a few apps refuse
+  // to register the entry when the label/issuer disagree.
   const label = encodeURIComponent(`${ISSUER}:${email}`)
-  const params = new URLSearchParams({
-    secret,
-    issuer: ISSUER,
-    algorithm: 'SHA1',
-    digits: String(DIGITS),
-    period: String(STEP),
-  })
-  return `otpauth://totp/${label}?${params.toString()}`
+  const enc = (s: string) => encodeURIComponent(s)
+  const params =
+    `secret=${secret}` +
+    `&issuer=${enc(ISSUER)}` +
+    `&algorithm=SHA1` +
+    `&digits=${DIGITS}` +
+    `&period=${STEP}`
+  return `otpauth://totp/${label}?${params}`
 }
 
 export async function buildQrDataUrl(email: string, secret: string): Promise<string> {
@@ -91,12 +95,19 @@ export function verifyTotp(token: string, secret: string): boolean {
   if (!/^\d{6}$/.test(token)) return false
   if (!secret) return false
   const now = Date.now()
+  const expectedCodes: string[] = []
   for (let i = -VERIFY_WINDOW; i <= VERIFY_WINDOW; i++) {
     try {
-      if (totpAt(secret, now + i * STEP * 1000) === token) return true
+      const code = totpAt(secret, now + i * STEP * 1000)
+      expectedCodes.push(code)
+      if (code === token) return true
     } catch {
       return false
     }
   }
+  // Diagnostic — comment out once enrollment is working in production.
+  console.warn(
+    `[totp] verify failed. got=${token} expected_window=${expectedCodes.join(',')} secret_prefix=${secret.slice(0, 4)}…(${secret.length} chars)`,
+  )
   return false
 }

@@ -14,6 +14,7 @@ import {
   ScrollText,
   Settings,
   ShieldCheck,
+  FlaskConical,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -48,7 +49,10 @@ const sections: NavSection[] = [
   },
   {
     title: 'System',
-    items: [{ href: '/settings', label: 'Settings', icon: Settings }],
+    items: [
+      { href: '/qa', label: 'QA smoke test', icon: FlaskConical },
+      { href: '/settings', label: 'Settings', icon: Settings },
+    ],
   },
 ]
 

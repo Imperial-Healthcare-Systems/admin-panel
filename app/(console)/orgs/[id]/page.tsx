@@ -410,11 +410,11 @@ function UsersTab({ orgId }: { orgId: string }) {
           {all.length === 0 && <tr><td colSpan={6} className="py-6 text-center text-[var(--color-text-dim)]">No users</td></tr>}
           {all.map((u) => (
             <tr key={`${u._product}-${u.id}`}>
-              <td>{u.first_name} {u.last_name}</td>
+              <td>{u.full_name ?? '—'}</td>
               <td className="text-xs">{u.email}</td>
               <td className="text-xs uppercase">{u._product}</td>
               <td className="text-xs text-[var(--color-text-muted)]">{u.role}</td>
-              <td>{u.is_active ? <span className="imp-pill bg-[#0F2A1E] text-[var(--color-success)]">Active</span> : <span className="imp-pill bg-[var(--color-surface-3)] text-[var(--color-text-dim)]">Inactive</span>}</td>
+              <td>{u.status === 'active' ? <span className="imp-pill bg-[#0F2A1E] text-[var(--color-success)]">Active</span> : <span className="imp-pill bg-[var(--color-surface-3)] text-[var(--color-text-dim)]">{u.status ?? 'inactive'}</span>}</td>
               <td className="text-xs">{u.last_login_at ? relativeTime(u.last_login_at) : '—'}</td>
             </tr>
           ))}
@@ -517,7 +517,7 @@ function ImpersonateTab({ orgId }: { orgId: string }) {
           </select>
           <select value={userId} onChange={(e) => setUserId(e.target.value)} className="imp-input">
             <option value="">Pick a user…</option>
-            {users.map((u) => <option key={u.id} value={u.id}>{u.first_name} {u.last_name} — {u.email}</option>)}
+            {users.map((u) => <option key={u.id} value={u.id}>{u.full_name ?? u.email} — {u.email}</option>)}
           </select>
         </div>
         <textarea

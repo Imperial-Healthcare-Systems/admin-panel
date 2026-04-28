@@ -18,5 +18,6 @@ export const config = {
     '/refunds/:path*',
     '/audit/:path*',
     '/settings/:path*',
+    '/qa/:path*',
   ],
 }

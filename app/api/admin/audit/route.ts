@@ -47,9 +47,9 @@ export async function GET(req: NextRequest) {
     ...(imps ?? []).map((i) => i.admin_id),
   ])
   const { data: admins } = allAdminIds.size
-    ? await supabaseAdmin.from('employees').select('id,first_name,last_name,email').in('id', Array.from(allAdminIds))
+    ? await supabaseAdmin.from('employees').select('id,full_name,email').in('id', Array.from(allAdminIds))
     : { data: [] as Array<any> }
-  const nameById = new Map((admins ?? []).map((a) => [a.id, `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim() || a.email]))
+  const nameById = new Map((admins ?? []).map((a) => [a.id, a.full_name || a.email]))
 
   const merged = [
     ...(actions ?? []).map((a) => ({

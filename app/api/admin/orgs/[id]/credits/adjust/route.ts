@@ -1,4 +1,9 @@
 // §6.2 — Manual credit adjustment.
+// ICRM live schema notes (handled here):
+//  * org_credits has `total_purchased` (not lifetime_purchased).
+//  * credit_transactions has `direction` ('debit'|'credit') we always populate.
+//  * `description` is the existing notes column; we mirror to `notes` (added by 002).
+//  * `user_id` is FK to crm_users — admin-initiated rows leave it NULL and use `created_by`.
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
@@ -30,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data: wallet } = await supabaseAdmin
     .from('org_credits')
-    .select('balance,lifetime_purchased')
+    .select('balance,total_purchased,lifetime_consumed')
     .eq('org_id', orgId)
     .single()
   if (!wallet) return NextResponse.json({ error: 'Org not found' }, { status: 404 })
@@ -43,7 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     updated_at: new Date().toISOString(),
   }
   if (numAmount > 0) {
-    update.lifetime_purchased = Number(wallet.lifetime_purchased ?? 0) + numAmount
+    update.total_purchased = Number(wallet.total_purchased ?? 0) + numAmount
   }
   await supabaseAdmin.from('org_credits').update(update).eq('org_id', orgId)
 
@@ -51,11 +56,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     org_id: orgId,
     type,
     amount: numAmount,
+    direction: numAmount > 0 ? 'credit' : 'debit',
     reference_type: 'manual_adjustment',
-    reference_id: adminId,
+    reference_id: null,
     balance_after: newBalance,
+    description: reason,
     notes: reason,
     created_by: adminId,
+    user_id: null,
   })
 
   await supabaseAdmin.from('platform_admin_log').insert({

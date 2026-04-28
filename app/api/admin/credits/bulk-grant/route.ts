@@ -32,23 +32,35 @@ export async function POST(req: NextRequest) {
   // Walk each org so balance_after stays accurate (no race protection here — single-admin tool).
   let applied = 0
   for (const orgId of orgIds) {
-    const { data: w } = await supabaseAdmin.from('org_credits').select('balance,lifetime_purchased').eq('org_id', orgId).maybeSingle()
+    const { data: w } = await supabaseAdmin
+      .from('org_credits')
+      .select('balance,total_purchased')
+      .eq('org_id', orgId)
+      .maybeSingle()
     const newBalance = Number(w?.balance ?? 0) + parsed.data.amount
     if (w) {
       await supabaseAdmin.from('org_credits').update({
         balance: newBalance,
-        lifetime_purchased: Number(w.lifetime_purchased ?? 0) + parsed.data.amount,
+        total_purchased: Number(w.total_purchased ?? 0) + parsed.data.amount,
         updated_at: new Date().toISOString(),
       }).eq('org_id', orgId)
     } else {
       await supabaseAdmin.from('org_credits').insert({
-        org_id: orgId, balance: newBalance, lifetime_purchased: parsed.data.amount, lifetime_consumed: 0,
+        org_id: orgId, balance: newBalance, total_purchased: parsed.data.amount, lifetime_consumed: 0,
       })
     }
     await supabaseAdmin.from('credit_transactions').insert({
-      org_id: orgId, type: 'promotional', amount: parsed.data.amount,
-      reference_type: 'bulk_promotional', reference_id: admin.adminId,
-      balance_after: newBalance, notes: parsed.data.reason, created_by: admin.adminId,
+      org_id: orgId,
+      type: 'promotional',
+      amount: parsed.data.amount,
+      direction: 'credit',
+      reference_type: 'bulk_promotional',
+      reference_id: null,
+      balance_after: newBalance,
+      description: parsed.data.reason,
+      notes: parsed.data.reason,
+      created_by: admin.adminId,
+      user_id: null,
     })
     applied++
   }

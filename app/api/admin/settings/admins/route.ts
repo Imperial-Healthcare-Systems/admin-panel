@@ -11,7 +11,7 @@ export async function GET() {
   void admin
   const { data } = await supabaseAdmin
     .from('employees')
-    .select('id,email,first_name,last_name,role,is_platform_admin,totp_enabled,is_active,last_login_at')
+    .select('id,email,full_name,role,is_platform_admin,totp_enabled,status,last_login_at')
     .eq('is_platform_admin', true)
   return NextResponse.json({ admins: data ?? [] })
 }

@@ -62,19 +62,24 @@ export async function POST(req: NextRequest) {
     status: isFull ? 'refunded' : 'partially_refunded',
   }).eq('id', invoice_id)
 
-  // §5.8: auto-create credit_transactions row of type='refund'
+  // §5.8: auto-create credit_transactions row of type='refund' (paper trail).
+  // Refund hits cash, not credits, so amount is 0 and balance is unchanged.
   if (inv.org_id) {
     const { data: w } = await supabaseAdmin.from('org_credits').select('balance').eq('org_id', inv.org_id).maybeSingle()
-    const newBalance = Number(w?.balance ?? 0) // refund hits cash, not credits — but log it for paper trail
+    const newBalance = Number(w?.balance ?? 0)
+    const note = `Cashfree refund ${formatCur(amount, inv.currency)} — ${reason}`
     await supabaseAdmin.from('credit_transactions').insert({
       org_id: inv.org_id,
       type: 'refund',
       amount: 0,
+      direction: 'credit', // bookkeeping side — not a balance-changing entry
       reference_type: 'platform_invoice',
       reference_id: invoice_id,
       balance_after: newBalance,
-      notes: `Cashfree refund ${formatCur(amount, inv.currency)} — ${reason}`,
+      description: note,
+      notes: note,
       created_by: adminId,
+      user_id: null,
     })
   }
 

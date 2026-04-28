@@ -27,7 +27,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     .eq('org_id', orgId)
   const { count: activeUsers } = await supabaseAdmin
     .from('employees').select('*', { count: 'exact', head: true })
-    .eq('org_id', orgId).eq('is_active', true)
+    .eq('org_id', orgId).eq('status', 'active')
 
   // Latest health
   const { data: health } = await supabaseAdmin

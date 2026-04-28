@@ -39,10 +39,10 @@ export const authOptions: NextAuthOptions = {
         const { data: emp } = await supabaseAdmin
           .from('employees')
           .select(
-            'id,email,first_name,last_name,role,is_platform_admin,is_active,org_id,totp_secret,totp_enabled,organisation:organisations(slug)',
+            'id,email,full_name,role,is_platform_admin,status,org_id,totp_secret,totp_enabled,organisation:organisations(slug)',
           )
           .eq('email', email)
-          .eq('is_active', true)
+          .eq('status', 'active')
           .single()
 
         if (!emp) return null
@@ -69,7 +69,7 @@ export const authOptions: NextAuthOptions = {
         return {
           id: emp.id,
           email: emp.email,
-          name: `${emp.first_name ?? ''} ${emp.last_name ?? ''}`.trim() || emp.email,
+          name: emp.full_name || emp.email,
           role: emp.role,
         } as { id: string; email: string; name: string; role: string }
       },

@@ -1,4 +1,6 @@
-// §5.4 — Global credits view: outstanding liability, top consumers, feature usage breakdown.
+// §5.4 — Global credits view: outstanding liability, top consumers, feature usage.
+// ICRM credit_transactions has `direction` (debit/credit). Negative amount or
+// direction='debit' both signal consumption. We accept either.
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/session'
@@ -15,19 +17,20 @@ export async function GET(_req: NextRequest) {
   const monthStart = new Date()
   monthStart.setDate(1)
 
-  // Consumption by org (this month)
+  // Consumption this month — use direction='debit' OR amount<0 to be tolerant of legacy rows.
   const { data: consumption } = await supabaseAdmin
     .from('credit_transactions')
-    .select('org_id,amount,reference_type')
-    .lt('amount', 0)
+    .select('org_id,amount,direction,reference_type,feature_key')
     .gte('created_at', monthStart.toISOString())
 
   const byOrg = new Map<string, number>()
   const byFeature = new Map<string, number>()
   for (const t of consumption ?? []) {
+    const isDebit = t.direction === 'debit' || Number(t.amount) < 0
+    if (!isDebit) continue
     const amt = Math.abs(Number(t.amount ?? 0))
     byOrg.set(t.org_id, (byOrg.get(t.org_id) ?? 0) + amt)
-    const ref = t.reference_type ?? 'unknown'
+    const ref = t.reference_type ?? t.feature_key ?? 'unknown'
     byFeature.set(ref, (byFeature.get(ref) ?? 0) + amt)
   }
 

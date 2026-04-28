@@ -79,7 +79,7 @@ export default function SettingsPage() {
               const isSelf = a.id === (session?.user as { id?: string })?.id
               return (
                 <tr key={a.id}>
-                  <td>{a.first_name} {a.last_name} {isSelf && <span className="text-[10px] text-[var(--color-text-dim)]">(you)</span>}</td>
+                  <td>{a.full_name ?? a.email} {isSelf && <span className="text-[10px] text-[var(--color-text-dim)]">(you)</span>}</td>
                   <td className="text-xs">{a.email}</td>
                   <td className="text-xs">{a.role}</td>
                   <td>

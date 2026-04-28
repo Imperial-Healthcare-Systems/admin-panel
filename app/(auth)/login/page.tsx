@@ -4,7 +4,7 @@ import { useState, FormEvent, Suspense } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { ShieldCheck, Mail, KeyRound, QrCode, Loader2 } from 'lucide-react'
+import { ShieldCheck, Mail, KeyRound, QrCode, Loader2, Copy, Check } from 'lucide-react'
 
 type Step = 'email' | 'otp' | 'totp-enroll' | 'totp-verify'
 
@@ -33,6 +33,7 @@ function LoginInner() {
   const [enrollSecret, setEnrollSecret] = useState('')
   const [enrollQr, setEnrollQr] = useState('')
   const [totp, setTotp] = useState('')
+  const [secretCopied, setSecretCopied] = useState(false)
 
   async function handleEmail(e: FormEvent) {
     e.preventDefault()
@@ -217,8 +218,11 @@ function LoginInner() {
               <h2 className="text-lg font-semibold flex items-center gap-2">
                 <QrCode size={18} /> Set up authenticator
               </h2>
+              <div className="text-xs text-[var(--color-warning)] bg-[#2A210F] rounded p-2">
+                ⚠ If you&apos;ve scanned an &quot;Imperial Admin&quot; QR before, <strong>delete that entry</strong> from your authenticator first — every retry generates a new secret, and old entries produce stale codes.
+              </div>
               <p className="text-sm text-[var(--color-text-muted)]">
-                Scan with Google Authenticator / 1Password / Authy. Then enter the 6-digit code shown.
+                Scan with Google Authenticator / 1Password / Authy / Microsoft Authenticator, wait for a fresh 30-second code to appear, then enter it below.
               </p>
               {enrollQr && (
                 /* eslint-disable-next-line @next/next/no-img-element */
@@ -229,8 +233,30 @@ function LoginInner() {
                 />
               )}
               <details className="text-xs text-[var(--color-text-dim)]">
-                <summary className="cursor-pointer">Can&apos;t scan? Show secret</summary>
-                <code className="block mt-2 break-all bg-[var(--color-surface-2)] p-2 rounded">{enrollSecret}</code>
+                <summary className="cursor-pointer">Can&apos;t scan? Enter manually</summary>
+                <div className="mt-2 space-y-2">
+                  <code className="block bg-[var(--color-surface-2)] p-2 rounded font-mono text-[11px] leading-relaxed tracking-wider break-all">
+                    {enrollSecret.replace(/(.{4})/g, '$1 ').trim()}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(enrollSecret)
+                        setSecretCopied(true)
+                        setTimeout(() => setSecretCopied(false), 1500)
+                      } catch {
+                        toast.error('Clipboard blocked — long-press to copy')
+                      }
+                    }}
+                    className="imp-btn imp-btn-ghost text-xs"
+                  >
+                    {secretCopied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy secret</>}
+                  </button>
+                  <p className="text-[10px] text-[var(--color-text-dim)]">
+                    Time-based · 6 digits · 30s · SHA1
+                  </p>
+                </div>
               </details>
               <input
                 inputMode="numeric"

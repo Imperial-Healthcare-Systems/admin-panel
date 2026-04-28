@@ -46,9 +46,9 @@ export async function POST(req: NextRequest) {
 
   const { data: emp } = await supabaseAdmin
     .from('employees')
-    .select('id,is_platform_admin,is_active,totp_enabled,organisation:organisations(slug)')
+    .select('id,is_platform_admin,status,totp_enabled,organisation:organisations(slug)')
     .eq('email', email)
-    .eq('is_active', true)
+    .eq('status', 'active')
     .single()
 
   const slug = (emp?.organisation as { slug?: string } | null)?.slug

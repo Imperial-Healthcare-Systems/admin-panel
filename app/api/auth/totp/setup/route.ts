@@ -41,9 +41,9 @@ export async function POST(req: NextRequest) {
 
   const { data: emp } = await supabaseAdmin
     .from('employees')
-    .select('id,email,is_platform_admin,is_active,totp_enabled,organisation:organisations(slug)')
+    .select('id,email,is_platform_admin,status,totp_enabled,organisation:organisations(slug)')
     .eq('email', email)
-    .eq('is_active', true)
+    .eq('status', 'active')
     .single()
 
   const slug = (emp?.organisation as { slug?: string } | null)?.slug
@@ -57,6 +57,9 @@ export async function POST(req: NextRequest) {
   // Generate a fresh secret. We do NOT persist it until /enroll succeeds with a valid TOTP.
   const secret = generateTotpSecret()
   const qrDataUrl = await buildQrDataUrl(email, secret)
+
+  // Diagnostic log — comment out once enrollment is stable.
+  console.log(`[totp/setup] new enrollment for ${email}: secret_prefix=${secret.slice(0, 4)}…(${secret.length} chars)`)
 
   return NextResponse.json({ ok: true, secret, qrDataUrl })
 }

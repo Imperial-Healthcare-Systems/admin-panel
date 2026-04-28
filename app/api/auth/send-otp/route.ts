@@ -31,9 +31,9 @@ export async function POST(req: NextRequest) {
   // leak whether the email exists — same response either way.
   const { data: emp } = await supabaseAdmin
     .from('employees')
-    .select('id,email,is_platform_admin,is_active,totp_enabled,organisation:organisations(slug)')
+    .select('id,email,is_platform_admin,status,totp_enabled,organisation:organisations(slug)')
     .eq('email', email)
-    .eq('is_active', true)
+    .eq('status', 'active')
     .maybeSingle()
 
   const slug = (emp?.organisation as { slug?: string } | null)?.slug

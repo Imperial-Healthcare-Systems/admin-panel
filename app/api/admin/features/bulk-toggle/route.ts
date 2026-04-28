@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   const rows = orgIds.map((orgId) => ({
     org_id: orgId,
     feature_key: parsed.data.feature_key,
-    is_enabled: parsed.data.is_enabled,
+    enabled: parsed.data.is_enabled, // ICRM column name
     enabled_at: parsed.data.is_enabled ? now : null,
     enabled_by: parsed.data.is_enabled ? admin.adminId : null,
     disabled_at: !parsed.data.is_enabled ? now : null,

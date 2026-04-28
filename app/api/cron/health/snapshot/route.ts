@@ -22,7 +22,7 @@ async function runSnapshot(req: NextRequest) {
       .from('employees')
       .select('*', { count: 'exact', head: true })
       .eq('org_id', org.id)
-      .eq('is_active', true)
+      .eq('status', 'active')
     factors.active_users = activeEmps ?? 0
     if ((activeEmps ?? 0) === 0) score -= 40
 
