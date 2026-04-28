@@ -72,10 +72,13 @@ export async function GET(_req: NextRequest) {
     }),
   )
   checks.push(
-    await run('schema.ecosystem_events', async () => {
+    await run('schema.ecosystem_events (actor_id + 002 additions)', async () => {
+      // ICRM's existing column is `actor_id`. Migration 002 added `actor_user_id`
+      // and `actor_type` for spec parity. We probe both so a regression on either
+      // side fails loudly here instead of in a per-org route.
       const r = await supabaseAdmin
         .from('ecosystem_events')
-        .select('id,org_id,source_platform,event_type,payload,created_at')
+        .select('id,org_id,source_platform,event_type,actor_id,actor_user_id,actor_type,entity_id,payload,created_at')
         .limit(1)
       return expectOk('ecosystem_events', r)
     }),

@@ -92,6 +92,15 @@ BEGIN
 END $$;
 
 -- ---------------------------------------------------------------------
+-- ecosystem_events — pre-existing slim version may lack actor columns
+-- (CREATE TABLE IF NOT EXISTS in 001 was a no-op against an older copy).
+-- ---------------------------------------------------------------------
+ALTER TABLE ecosystem_events ADD COLUMN IF NOT EXISTS actor_user_id UUID;
+ALTER TABLE ecosystem_events ADD COLUMN IF NOT EXISTS actor_type TEXT;
+ALTER TABLE ecosystem_events ADD COLUMN IF NOT EXISTS source_platform TEXT;
+ALTER TABLE ecosystem_events ADD COLUMN IF NOT EXISTS payload JSONB DEFAULT '{}'::jsonb;
+
+-- ---------------------------------------------------------------------
 -- Sanity: confirm the additive columns landed
 -- ---------------------------------------------------------------------
 -- SELECT column_name FROM information_schema.columns
