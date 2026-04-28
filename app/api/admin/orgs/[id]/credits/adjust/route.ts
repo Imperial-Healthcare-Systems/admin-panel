@@ -33,24 +33,45 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'Amount must be a non-zero number' }, { status: 400 })
   }
 
+  // Wallet may not exist yet — first manual grant should bootstrap it.
+  // Verify the org itself exists before creating a wallet for it.
+  const { data: org } = await supabaseAdmin
+    .from('organisations')
+    .select('id')
+    .eq('id', orgId)
+    .maybeSingle()
+  if (!org) return NextResponse.json({ error: 'Organisation not found' }, { status: 404 })
+
   const { data: wallet } = await supabaseAdmin
     .from('org_credits')
     .select('balance,total_purchased,lifetime_consumed')
     .eq('org_id', orgId)
-    .single()
-  if (!wallet) return NextResponse.json({ error: 'Org not found' }, { status: 404 })
+    .maybeSingle()
 
-  const newBalance = Number(wallet.balance) + numAmount
+  const currentBalance = Number(wallet?.balance ?? 0)
+  const currentPurchased = Number(wallet?.total_purchased ?? 0)
+  const newBalance = currentBalance + numAmount
   if (newBalance < 0) return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 })
 
-  const update: Record<string, unknown> = {
-    balance: newBalance,
-    updated_at: new Date().toISOString(),
+  const newPurchased = numAmount > 0 ? currentPurchased + numAmount : currentPurchased
+
+  if (wallet) {
+    await supabaseAdmin
+      .from('org_credits')
+      .update({
+        balance: newBalance,
+        total_purchased: newPurchased,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('org_id', orgId)
+  } else {
+    await supabaseAdmin.from('org_credits').insert({
+      org_id: orgId,
+      balance: newBalance,
+      total_purchased: newPurchased,
+      lifetime_consumed: 0,
+    })
   }
-  if (numAmount > 0) {
-    update.total_purchased = Number(wallet.total_purchased ?? 0) + numAmount
-  }
-  await supabaseAdmin.from('org_credits').update(update).eq('org_id', orgId)
 
   await supabaseAdmin.from('credit_transactions').insert({
     org_id: orgId,
