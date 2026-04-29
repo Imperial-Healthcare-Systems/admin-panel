@@ -36,6 +36,28 @@ export default function OrgDetailPage({ params }: { params: Promise<{ id: string
 
   if (!core) return <div className="text-sm text-[var(--color-text-muted)]">Loading…</div>
 
+  // Org may be missing in two cases:
+  //  1. Direct navigation to an invalid id
+  //  2. The Danger Zone just deleted this org and SWR re-fetched in the brief
+  //     window before router.push('/orgs') completed.
+  // Both should render a tidy "not found" instead of crashing.
+  if (!core.org) {
+    return (
+      <div className="space-y-4">
+        <Link href="/orgs" className="inline-flex items-center gap-1 text-xs text-[var(--color-text-dim)] hover:text-[var(--color-text-muted)]">
+          <ArrowLeft size={12} /> Back to organisations
+        </Link>
+        <div className="imp-card p-8 text-center">
+          <AlertTriangle size={28} className="mx-auto text-[var(--color-warning)] mb-3" />
+          <h2 className="text-lg font-semibold mb-1">Organisation not found</h2>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            This organisation may have been deleted or archived. Return to the list to continue.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   const { org, stats, health } = core
   const sub = (org.subscriptions ?? [])[0]
   const credits = (org.credits ?? [])[0]
