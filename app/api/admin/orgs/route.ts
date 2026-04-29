@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/session'
 import { audit } from '@/lib/audit'
+import { sendOrgWelcomeEmail } from '@/lib/email'
+
+const PRODUCT_LABEL: Record<string, string> = { ihrms: 'IHRMS', icrm: 'ICRM', bundle: 'IHRMS + ICRM' }
 
 export async function GET(req: NextRequest) {
   let admin
@@ -183,14 +186,62 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  // Welcome email to billing contact — best-effort. SMTP failure must NOT
+  // unwind the org creation, but we record the result in the audit log so
+  // a missed email is visible.
+  let email_status: 'sent' | 'skipped_no_address' | 'failed' | 'dev_logged' = 'skipped_no_address'
+  let email_error: string | null = null
+  if (billing_email) {
+    try {
+      // Build product labels from the requested subs (use the requested list,
+      // not just `created_subs`, so the email reflects what the admin asked
+      // for even if a sub-row insert silently failed).
+      const products = Array.from(
+        new Set(
+          subs
+            .map((s) => PRODUCT_LABEL[s.product])
+            .filter(Boolean) as string[],
+        ),
+      ).flatMap((p) => (p === 'IHRMS + ICRM' ? ['IHRMS', 'ICRM'] : [p]))
+
+      const firstSub = subs[0]
+      const trialDays = Number(firstSub?.trial_days ?? 14)
+      const trialEndsAt = trialDays > 0 ? new Date(Date.now() + trialDays * 86_400_000).toISOString() : null
+
+      const result = await sendOrgWelcomeEmail(billing_email, {
+        orgName: name,
+        products,
+        tier: firstSub?.tier ?? 'starter',
+        seats: Number(firstSub?.seats ?? 1),
+        amountPerMonth: Number(firstSub?.amount_per_month ?? 0),
+        trialDays,
+        trialEndsAt,
+        starterCredits: starterCredits || 0,
+      })
+      email_status = result.delivered ? 'sent' : 'dev_logged'
+    } catch (e) {
+      email_status = 'failed'
+      email_error = (e as Error).message
+      console.error('[org-welcome] send failed:', e)
+    }
+  }
+
   await audit({
     admin_id: admin.adminId,
     action: 'org.created',
     target_type: 'organisation',
     target_id: org.id,
-    payload: { name, slug, billing_email, subscriptions: created_subs, starter_credits: starterCredits },
+    payload: {
+      name,
+      slug,
+      billing_email,
+      subscriptions: created_subs,
+      starter_credits: starterCredits,
+      email_status,
+      ...(email_error ? { email_error } : {}),
+    },
     ip_address: req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null,
   })
 
-  return NextResponse.json({ data: org }, { status: 201 })
+  return NextResponse.json({ data: org, email_status }, { status: 201 })
 }
