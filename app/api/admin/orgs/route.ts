@@ -29,6 +29,8 @@ export async function GET(req: NextRequest) {
 
   if (q) query = query.ilike('name', `%${q}%`)
   if (status) query = query.eq('status', status)
+  // Hide archived orgs from the default list — opt in via ?status=archived.
+  else query = query.neq('status', 'archived')
 
   const { data: orgs, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

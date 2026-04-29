@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import useSWR from 'swr'
 import Link from 'next/link'
-import { Search, Filter } from 'lucide-react'
+import { Search, Filter, Plus, X, Loader2 } from 'lucide-react'
 import { formatINR, formatDate, formatNumber } from '@/lib/format'
 
 type Row = {
@@ -34,12 +34,14 @@ export default function OrgsListPage() {
   if (statusFilter) params.set('status', statusFilter)
   if (tierFilter) params.set('tier', tierFilter)
 
-  const { data } = useSWR<{ rows: Row[] }>(`/api/admin/orgs?${params.toString()}`, fetcher)
+  const { data, mutate } = useSWR<{ rows: Row[] }>(`/api/admin/orgs?${params.toString()}`, fetcher)
 
   const rows = useMemo(() => {
     if (!data?.rows) return []
     return healthFilter ? data.rows.filter((r) => r.risk_level === healthFilter) : data.rows
   }, [data, healthFilter])
+
+  const [showCreate, setShowCreate] = useState(false)
 
   return (
     <div className="space-y-4">
@@ -48,7 +50,12 @@ export default function OrgsListPage() {
           <h1 className="text-2xl font-semibold">Organisations</h1>
           <p className="text-sm text-[var(--color-text-muted)]">All customers across IHRMS + ICRM.</p>
         </div>
+        <button onClick={() => setShowCreate(true)} className="imp-btn imp-btn-primary flex items-center gap-1.5">
+          <Plus size={14} /> New Organisation
+        </button>
       </div>
+
+      {showCreate && <CreateOrgModal onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); mutate() }} />}
 
       <div className="imp-card p-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[220px]">
@@ -61,6 +68,7 @@ export default function OrgsListPage() {
           <option value="active">Active</option>
           <option value="suspended">Suspended</option>
           <option value="cancelled">Cancelled</option>
+          <option value="archived">Archived</option>
         </select>
         <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value)} className="imp-input py-1.5 max-w-[160px]">
           <option value="">All tiers</option>
@@ -150,5 +158,160 @@ function HealthPill({ score, risk }: { score: number | null; risk: string | null
       <span className="font-medium tabular-nums">{score}</span>
       <span className="text-[10px] text-[var(--color-text-dim)] uppercase">{risk}</span>
     </span>
+  )
+}
+
+/* ───────────── Create Organisation Modal ───────────── */
+function CreateOrgModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [form, setForm] = useState({
+    name: '', billing_email: '', contact_phone: '', gstin: '',
+    enable_icrm: true, enable_hrms: true,
+    tier: 'starter', seats: 1, amount: 0, trial_days: 14,
+    starter_credits: 100,
+  })
+  const [submitting, setSubmitting] = useState(false)
+  const [err, setErr] = useState('')
+
+  const upd = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }))
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setErr('')
+    if (!form.name.trim()) { setErr('Name is required.'); return }
+
+    const subscriptions: Array<{ product: 'icrm' | 'ihrms' | 'bundle'; tier: string; seats: number; amount_per_month: number; status: 'trial'; trial_days: number }> = []
+    if (form.enable_icrm && form.enable_hrms) {
+      subscriptions.push({ product: 'bundle', tier: form.tier, seats: form.seats, amount_per_month: form.amount, status: 'trial', trial_days: form.trial_days })
+    } else if (form.enable_icrm) {
+      subscriptions.push({ product: 'icrm', tier: form.tier, seats: form.seats, amount_per_month: form.amount, status: 'trial', trial_days: form.trial_days })
+    } else if (form.enable_hrms) {
+      subscriptions.push({ product: 'ihrms', tier: form.tier, seats: form.seats, amount_per_month: form.amount, status: 'trial', trial_days: form.trial_days })
+    }
+
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/admin/orgs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          billing_email: form.billing_email.trim() || null,
+          contact_phone: form.contact_phone.trim() || null,
+          gstin: form.gstin.trim() || null,
+          subscriptions,
+          starter_credits: form.starter_credits,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setErr(data.error ?? 'Failed to create organisation.'); return }
+      onCreated()
+    } catch {
+      setErr('Network error.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <form onClick={(e) => e.stopPropagation()} onSubmit={submit}
+        className="imp-card w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-lg font-semibold">New Organisation</h2>
+            <p className="text-xs text-[var(--color-text-muted)] mt-0.5">Provision a new tenant on the Imperial platform.</p>
+          </div>
+          <button type="button" onClick={onClose} className="text-[var(--color-text-dim)] hover:text-white"><X size={18} /></button>
+        </div>
+
+        {err && <div className="mb-4 px-3 py-2 rounded bg-[#2A0E12] text-[var(--color-danger)] text-sm">{err}</div>}
+
+        <div className="space-y-4">
+          {/* Identity */}
+          <Section title="Identity">
+            <Field label="Organisation name *">
+              <input className="imp-input" value={form.name} onChange={(e) => upd('name', e.target.value)} placeholder="Acme Healthcare Pvt Ltd" />
+            </Field>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field label="Billing email">
+                <input type="email" className="imp-input" value={form.billing_email} onChange={(e) => upd('billing_email', e.target.value)} placeholder="billing@acme.com" />
+              </Field>
+              <Field label="Contact phone">
+                <input className="imp-input" value={form.contact_phone} onChange={(e) => upd('contact_phone', e.target.value)} placeholder="+91 ..." />
+              </Field>
+            </div>
+            <Field label="GSTIN">
+              <input className="imp-input" value={form.gstin} onChange={(e) => upd('gstin', e.target.value)} placeholder="06AAACI0000A1Z5" />
+            </Field>
+          </Section>
+
+          {/* Products */}
+          <Section title="Products & Subscription">
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form.enable_icrm} onChange={(e) => upd('enable_icrm', e.target.checked)} />
+                <span className="text-sm">ICRM</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form.enable_hrms} onChange={(e) => upd('enable_hrms', e.target.checked)} />
+                <span className="text-sm">IHRMS</span>
+              </label>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Field label="Tier">
+                <select className="imp-input" value={form.tier} onChange={(e) => upd('tier', e.target.value)}>
+                  <option value="starter">Starter</option>
+                  <option value="growth">Growth</option>
+                  <option value="pro">Pro</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+              </Field>
+              <Field label="Seats">
+                <input type="number" min={1} className="imp-input" value={form.seats} onChange={(e) => upd('seats', Number(e.target.value) || 1)} />
+              </Field>
+              <Field label="Monthly ₹">
+                <input type="number" min={0} className="imp-input" value={form.amount} onChange={(e) => upd('amount', Number(e.target.value) || 0)} />
+              </Field>
+              <Field label="Trial days">
+                <input type="number" min={0} className="imp-input" value={form.trial_days} onChange={(e) => upd('trial_days', Number(e.target.value) || 0)} />
+              </Field>
+            </div>
+          </Section>
+
+          {/* Credits */}
+          <Section title="Initial Credits">
+            <Field label="Starter credit balance">
+              <input type="number" min={0} className="imp-input" value={form.starter_credits} onChange={(e) => upd('starter_credits', Number(e.target.value) || 0)} />
+            </Field>
+          </Section>
+        </div>
+
+        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-[var(--color-border)]">
+          <button type="button" onClick={onClose} className="imp-btn imp-btn-ghost">Cancel</button>
+          <button type="submit" disabled={submitting} className="imp-btn imp-btn-primary flex items-center gap-1.5">
+            {submitting ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+            {submitting ? 'Creating…' : 'Create Organisation'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-dim)] mb-2">{title}</h3>
+      <div className="space-y-3">{children}</div>
+    </div>
+  )
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs text-[var(--color-text-muted)] mb-1">{label}</label>
+      {children}
+    </div>
   )
 }

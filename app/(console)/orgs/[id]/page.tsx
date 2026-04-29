@@ -3,10 +3,11 @@
 import { useState, useEffect, use } from 'react'
 import useSWR from 'swr'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import {
   ArrowLeft, AlertTriangle, Coins, Sparkles, Users, ScrollText, ShieldAlert,
-  Receipt, Loader2, ToggleLeft, ToggleRight, ExternalLink,
+  Receipt, Loader2, ToggleLeft, ToggleRight, ExternalLink, Trash2, Archive, RotateCcw,
   type LucideIcon,
 } from 'lucide-react'
 import { formatINR, formatNumber, formatDate, formatDateTime, relativeTime } from '@/lib/format'
@@ -108,6 +109,131 @@ export default function OrgDetailPage({ params }: { params: Promise<{ id: string
       {tab === 'users' && <UsersTab orgId={orgId} />}
       {tab === 'activity' && <ActivityTab orgId={orgId} />}
       {tab === 'impersonate' && <ImpersonateTab orgId={orgId} />}
+
+      <DangerZone orgId={orgId} orgName={org.name} status={org.status} />
+    </div>
+  )
+}
+
+// ---------- Danger Zone ----------
+function DangerZone({ orgId, orgName, status }: { orgId: string; orgName: string; status: string }) {
+  const router = useRouter()
+  const [busy, setBusy] = useState(false)
+  const isArchived = status === 'archived'
+
+  async function callDelete(body: Record<string, unknown>, onDone: () => void) {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/admin/orgs/${orgId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed')
+      onDone()
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function archive() {
+    const reason = prompt(`Archive "${orgName}"?\n\nWhy are you archiving? (min 20 chars). All active subscriptions will be cancelled. Data is preserved and reversible.`)
+    if (reason == null) return
+    if (reason.trim().length < 20) return toast.error('Reason min 20 chars')
+    if (!confirm(`Archive ${orgName}? Active subscriptions will be cancelled. You can reactivate later.`)) return
+    callDelete({ mode: 'archive', reason }, () => {
+      toast.success('Organisation archived')
+      router.push('/orgs')
+    })
+  }
+
+  function reactivate() {
+    const reason = prompt(`Reactivate "${orgName}"?\n\nWhy are you reactivating? (min 20 chars).`)
+    if (reason == null) return
+    if (reason.trim().length < 20) return toast.error('Reason min 20 chars')
+    callDelete({ mode: 'reactivate', reason }, () => {
+      toast.success('Organisation reactivated')
+      router.refresh()
+    })
+  }
+
+  function destroy() {
+    const reason = prompt(`PERMANENTLY DELETE "${orgName}"?\n\nThis cascades to subscriptions, invoices, credits, features, and health snapshots for this org. It CANNOT be undone.\n\nWhy are you deleting? (min 20 chars).`)
+    if (reason == null) return
+    if (reason.trim().length < 20) return toast.error('Reason min 20 chars')
+    const typed = prompt(`Type DELETE_PERMANENTLY in CAPS to confirm. There is no undo.`)
+    if (typed == null) return
+    if (typed !== 'DELETE_PERMANENTLY') return toast.error('Confirmation text did not match')
+    callDelete({ mode: 'destroy', reason, confirm: 'DELETE_PERMANENTLY' }, () => {
+      toast.success('Organisation permanently deleted')
+      router.push('/orgs')
+    })
+  }
+
+  if (isArchived) {
+    return (
+      <div
+        className="imp-card p-5 mt-6"
+        style={{ borderColor: 'var(--color-warning)', borderWidth: 1.5 }}
+      >
+        <div className="text-xs font-semibold text-[var(--color-warning)] uppercase tracking-wider mb-1">
+          Archived
+        </div>
+        <p className="text-xs text-[var(--color-text-muted)] mb-4">
+          This organisation is archived. Subscriptions are cancelled and the org is hidden from the default list. All data is preserved.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={reactivate} disabled={busy} className="imp-btn imp-btn-ghost text-xs">
+            {busy ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Reactivate
+          </button>
+          <button onClick={destroy} disabled={busy} className="imp-btn imp-btn-danger text-xs">
+            {busy ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Delete permanently
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="imp-card p-5 mt-6"
+      style={{ borderColor: 'var(--color-danger)', borderWidth: 1.5 }}
+    >
+      <div className="text-xs font-semibold text-[var(--color-danger)] uppercase tracking-wider mb-1">
+        Danger zone
+      </div>
+      <p className="text-xs text-[var(--color-text-muted)] mb-4">
+        Both actions write to the audit log with your admin id and stated reason.
+      </p>
+
+      <div className="space-y-3">
+        <div className="flex justify-between items-start gap-4 flex-wrap">
+          <div>
+            <div className="font-medium text-sm flex items-center gap-2"><Archive size={14} /> Archive organisation</div>
+            <div className="text-xs text-[var(--color-text-muted)] mt-1 max-w-md">
+              Hide from the default list, cancel active subscriptions, preserve all data. Reversible.
+            </div>
+          </div>
+          <button onClick={archive} disabled={busy} className="imp-btn imp-btn-ghost text-xs whitespace-nowrap">
+            {busy ? <Loader2 size={12} className="animate-spin" /> : <Archive size={12} />} Archive
+          </button>
+        </div>
+
+        <div className="flex justify-between items-start gap-4 flex-wrap pt-3 border-t border-[var(--color-border)]">
+          <div>
+            <div className="font-medium text-sm text-[var(--color-danger)] flex items-center gap-2"><Trash2 size={14} /> Delete permanently</div>
+            <div className="text-xs text-[var(--color-text-muted)] mt-1 max-w-md">
+              Cascades to subscriptions, invoices, credits, features, health snapshots for this org. Cannot be undone. <strong>super_admin role required.</strong>
+            </div>
+          </div>
+          <button onClick={destroy} disabled={busy} className="imp-btn imp-btn-danger text-xs whitespace-nowrap">
+            {busy ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Delete permanently
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
