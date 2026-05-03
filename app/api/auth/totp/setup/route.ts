@@ -58,8 +58,10 @@ export async function POST(req: NextRequest) {
   const secret = generateTotpSecret()
   const qrDataUrl = await buildQrDataUrl(email, secret)
 
-  // Diagnostic log — comment out once enrollment is stable.
-  console.log(`[totp/setup] new enrollment for ${email}: secret_prefix=${secret.slice(0, 4)}…(${secret.length} chars)`)
+  // Diagnostic log — auto-suppressed in production (leaks secret prefix).
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[totp/setup] new enrollment for ${email}: secret_prefix=${secret.slice(0, 4)}…(${secret.length} chars)`)
+  }
 
   return NextResponse.json({ ok: true, secret, qrDataUrl })
 }

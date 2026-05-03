@@ -11,7 +11,7 @@ import QRCode from 'qrcode'
 const ISSUER = 'Imperial Admin'
 const STEP = 30
 const DIGITS = 6
-const VERIFY_WINDOW = 4 // accept ±2 minutes of clock skew between server and authenticator
+const VERIFY_WINDOW = 1 // accept ±30s of clock skew (prod-tightened replay window)
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
 
 function base32Encode(buf: Buffer): string {
@@ -105,9 +105,12 @@ export function verifyTotp(token: string, secret: string): boolean {
       return false
     }
   }
-  // Diagnostic — comment out once enrollment is working in production.
-  console.warn(
-    `[totp] verify failed. got=${token} expected_window=${expectedCodes.join(',')} secret_prefix=${secret.slice(0, 4)}…(${secret.length} chars)`,
-  )
+  // Diagnostic — auto-suppressed in production. Leaks would-be-valid TOTP codes
+  // and the secret prefix, which is useful in dev and a leak in prod.
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(
+      `[totp] verify failed. got=${token} expected_window=${expectedCodes.join(',')} secret_prefix=${secret.slice(0, 4)}…(${secret.length} chars)`,
+    )
+  }
   return false
 }
